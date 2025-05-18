@@ -128,61 +128,55 @@ void Widget::on_btnSendContext_clicked()
 {
     int writeCnt=0;
     QByteArray sendData=ui->lineEditSendContext->text().toUtf8();
-    writeCnt=serialPort->write(sendData);
+    writeCnt=serialPort->write(sendData+'\n');
     if(writeCnt==-1){
         ui->labelSendStatus->setText("SendError!");
     }else{
-        writeCntTotal+=writeCnt;
+        writeCntTotal+=(writeCnt-1);
         qDebug()<<"SendOK"<<sendData;
         ui->labelSendStatus->setText("SendOK!");
         ui->labelSendcnt->setText("Send:"+QString::number(writeCntTotal));
-        if(ui->checkBrevTime->isChecked()){
-            QString timeStamp=getSysTime()+"  ";
-            if(strcmp(sendData,sendBak.toUtf8())!=0){
-                ui->textEditRecord->append(sendData);
-                sendBak=QString(sendData);
-            }
-            ui->textEditRev->append(timeStamp+sendData);
-        }else{
-            //模拟接收数据
-            if(strcmp(sendData,sendBak.toUtf8())!=0){
-                ui->textEditRecord->append(sendData);
-                sendBak=QString(sendData);
-            }
-            //追加HEX字符
-            if(!sendData.isEmpty()){
-                if(ui->checkBHexDisplay->isChecked()){
-                    QByteArray tmpHexString=sendData.toHex();
-                    QString tmpStringHex=ui->textEditRev->toPlainText();
-                    tmpHexString=tmpStringHex.toUtf8()+tmpHexString;
-                    ui->textEditRev->setText(QString::fromUtf8(tmpHexString));
-                }else{
-                    ui->textEditRev->append(sendData);
-                }
-            }
-            readCntTotal+=sendData.size();
-            ui->labelRevcnt->setText("Received:"+QString::number(readCntTotal));
-        }
     }
 }
-//接收数据，但是没连串口，没有返回值
+
 void Widget::on_SerialData_readyToRead()
 {
     QByteArray revMessage=serialPort->readAll();
     qDebug() << "接收到数据，大小:" << revMessage.size();
     if(!revMessage.isEmpty()){
-        if(ui->checkBHexDisplay->isChecked()){
-            QByteArray tmpHexString=revMessage.toHex();
-            QString tmpStringHex=ui->textEditRev->toPlainText();
-            tmpHexString=tmpStringHex.toUtf8()+tmpHexString;
-            ui->textEditRev->setText(QString::fromUtf8(tmpHexString));
+        if(ui->checkBrevTime->isChecked()){
+            QString timeStamp=getSysTime()+"  ";
+            if(strcmp(revMessage,sendBak.toUtf8())!=0){
+                ui->textEditRecord->append(revMessage);
+                sendBak=QString(revMessage);
+            }
+            if(ui->checkBHexDisplay->isChecked()){
+                QByteArray timeStampHex=timeStamp.toUtf8().toHex();
+                QByteArray tmpHexString=revMessage.toHex();
+                QString tmpStringHex=ui->textEditRev->toPlainText();
+                tmpHexString=tmpStringHex.toUtf8()+tmpHexString;
+                ui->textEditRev->setText(timeStampHex+QString::fromUtf8(tmpHexString));
+            }else{
+                ui->textEditRev->append(timeStamp+revMessage);
+            }
         }else{
-            qDebug()<<"getMessage:"<<revMessage;
-            ui->textEditRev->append(revMessage);
-            readCntTotal+=revMessage.size();
-            qDebug() << "当前接收总字节数:" << readCntTotal;
-            ui->labelRevcnt->setNum(readCntTotal);
+            if(strcmp(revMessage,sendBak.toUtf8())!=0){
+                ui->textEditRecord->append(revMessage);
+                sendBak=QString(revMessage);
+            }
+
+                if(ui->checkBHexDisplay->isChecked()){
+                    QByteArray tmpHexString=revMessage.toHex();
+                    QString tmpStringHex=ui->textEditRev->toPlainText();
+                    tmpHexString=tmpStringHex.toUtf8()+tmpHexString;
+                    ui->textEditRev->setText(QString::fromUtf8(tmpHexString));
+                }else{
+                    ui->textEditRev->append(revMessage);
+                }
+            //}
         }
+                readCntTotal+=revMessage.size();
+                ui->labelRevcnt->setText("Received:"+QString::number(readCntTotal));
     }
 }
 
